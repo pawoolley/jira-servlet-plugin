@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<title>Served from Jira</title>
+
+<script src='http://localhost:8000/jquery-3.3.1.js'
+	type='text/javascript'></script>
+
+<script language='JavaScript' type='text/javascript'>
+
+	// Constants
+	const ticketDetailsPath = '/rest/api/latest/issue/';
+	const loginCheckPath = '/plugins/servlet/devoptics/is-logged-in';
+
+	// Setup variables
+	var ticketDetailsUrl;
+	var loginCheckUrl;
+	var source;
+	var origin;
+	var baseUrl;
+	
+	/* Convenience log function */ 
+	function log(msg) {
+		console.log(window.location.host + ': ' + msg);
+	}
+	
+	/* Send messages back to the origin of an event */
+	function sendMessage(msg) {
+		log('Sending \'' +msg+ '\' back to the source');
+		window.source.postMessage(msg, window.origin);
+	}
+	
+	/* Reacts to messasges sent to this page */
+	function receiveMessage(e) {
+		
+		window.source = e.source;
+		window.origin = e.origin;
+		
+		const data = e.data;
+		
+		if(data.startsWith('getTicketDetails,')){
+			getTicketDetails(data.replace('getTicketDetails,',''));
+		}
+		else if(data.startsWith('putSettings,')){
+			putSettings(data.replace('putSettings,',''));
+		}
+		else if(data.startsWith('doIsLoggedInCheck')){
+			doIsLoggedInCheck();
+		}
+		else {
+			throw new Error('Unknow function: ' + data);
+		}
+	}
+	
+	function putSettings(settingsStr) {
+		
+		const settings = JSON.parse(settingsStr);
+		
+		// Get the info out of the settings obj.
+		window.baseUrl = settings.baseUrl;
+		
+		// Setup the urls with the base url
+		window.ticketDetailsUrl = window.baseUrl + ticketDetailsPath;
+		window.loginCheckUrl = window.baseUrl + loginCheckPath;
+	}
+	
+	function getTicketDetails(ticketNo) {
+		
+		/* Get ticket details */
+		
+		var returnString;
+		$.ajax({
+			  url: ticketDetailsUrl + ticketNo,
+			  type: 'GET',
+			  success: function(data) { 
+				  log('Successfully got ticket details');
+				  returnString = 'ticketDetails,' + JSON.stringify(data, null, 2);
+			  },
+			  error:function (xhr, ajaxOptions, thrownError) {
+				log('Nope');
+				switch (xhr.status) {
+			        case 401:
+						log('401 Unauthorised');
+						returnString = 'getTicketDetails-unauthorised';
+				}
+			  }
+			});
+		
+		/* Tell the user what we got */
+		sendMessage(returnString);
+	}
+	
+	function doIsLoggedInCheck() {
+		
+		/* Hit our custom plugin to see if a user is logged in or not */
+		
+		log('loginCheckUrl=' + window.loginCheckUrl);
+		
+		$.ajax({
+			  url: window.loginCheckUrl,
+			  type: 'GET',
+			  success: function(data) { 
+				log('A user is logged in');
+			  },
+			  error:function (xhr, ajaxOptions, thrownError) {
+				log('A user is not logged in. Status = ' + xhr.status);
+				switch (xhr.status) {
+					case 0: {
+						log('Error: ' + xhr.statusText);
+						break;
+					}
+			        case 401: {
+						log('401 Unauthorised');
+						/* Send a message back to say that we are not authorised to get ticket details */
+						sendMessage('doIsLoggedInCheck-unauthorised');
+						break;
+			        }
+				}
+			  }
+			});
+	}
+
+	window.onload = function() {
+		
+		// Perform synchronous requests.  Only because I don't know JQuery and want to keep this simple for now.
+		jQuery.ajaxSetup({async:false});
+		
+		// Setup an event listener that calls receiveMessage() when the window
+		// receives a new MessageEvent.
+		window.addEventListener('message', receiveMessage);
+	}
+	
+</script>
+
+</head>
+<body>Hi from the plugin!
+</body>
+</html>

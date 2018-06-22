@@ -1,0 +1,15 @@
+<atlassian-plugin key="${atlassian.plugin.key}" name="CloudBees DevOptics Plugin" plugins-version="2">
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="${project.organization.name}" url="${project.organization.url}" />
+        <param name="plugin-icon">images/pluginIcon.png</param>
+        <param name="plugin-logo">images/pluginLogo.png</param>
+    </plugin-info>
+
+    <servlet name="DevOptics Servlet" key="devOpticsServlet" class="com.cloudbees.devoptics.jira.DevOpticsJIRAServlet">
+        <description>DevOptics Browser Connect Servlet.</description>
+        <url-pattern>/devoptics/*</url-pattern>
+    </servlet>
+    
+</atlassian-plugin>

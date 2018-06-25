@@ -25,7 +25,7 @@ public class DevOpticsJIRAServlet extends HttpServlet {
 
     private static final String KEY = "com.atlassian.jira.clickjacking.protection.exclude";
     private static final String VALUE = "/plugins/servlet/devoptics";
-    private static final String HTML_TO_SERVE = "/Users/paulwoolley/code/devoptics-jira-plugin/src/main/resources/serve-me.html";
+    private static final String HTML_TO_SERVE = "/home/serve-me.html";
 
     static {
 
@@ -52,8 +52,6 @@ public class DevOpticsJIRAServlet extends HttpServlet {
 
         if (path.equals("/load.html")) {
 
-            System.out.println("Serving page");
-
             // Set some cache control headers
             resp.addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
             resp.addHeader("Pragma", "no-cache");
@@ -62,10 +60,16 @@ public class DevOpticsJIRAServlet extends HttpServlet {
             // Pull the page from an absolute place on the filesystem rather than from within the packaged jar file
             // just so that we can make changes to the served page without re-deploying the jar each time.
             final File file = new File(HTML_TO_SERVE);
+            System.out.println("Serving page: " + file);
 
             try (InputStream inputStream = new FileInputStream(file)) {
                 final byte[] byteArray = IOUtils.toByteArray(inputStream);
                 resp.getOutputStream().write(byteArray);
+            } catch (final Exception e) {
+                // A bad thing happened.  Pass back the info to the client.
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                e.printStackTrace(resp.getWriter());
+                return;
             }
 
             resp.setStatus(HttpServletResponse.SC_OK);

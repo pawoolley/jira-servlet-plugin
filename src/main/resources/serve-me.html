@@ -57,6 +57,17 @@
 					}
 				});
 			},
+			projectKeys: function(){
+				DevopticsJiraPlugin.request({
+					url: window.baseUrl + '/rest/api/latest/project',
+					success: function (response) {
+						DevopticsJiraPlugin.sendMessage({type: 'projectKeys', value: response});
+					},
+					error: function (response, status) {
+						DevopticsJiraPlugin.sendMessage({type: 'projectKeys', value: false, error: status});
+					}
+				});
+			},
 			putSettings: function (data) {
 				var settings = data.value;
 				// Get the info out of the settings obj.
@@ -64,7 +75,7 @@
 				// Setup the urls with the base url
 				window.ticketDetailsUrl = window.baseUrl + this.ticketDetailsPath;
 				window.loginCheckUrl = window.baseUrl + this.loginCheckPath;
-				window.jqlUrl = window.baseUrl + this.loginCheckPath;
+				DevopticsJiraPlugin.projectKeys();
 			},
 			getTicketDetails: function (data) {
 				var ticketNo = data.value;

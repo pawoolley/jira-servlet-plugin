@@ -1,4 +1,4 @@
-package com.cloudbees.devoptics.jira;
+package com.cloudbees.devoptics.jira.server;
 
 import com.atlassian.jira.component.ComponentAccessor;
 
@@ -7,6 +7,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -19,22 +21,39 @@ import org.apache.commons.lang3.StringUtils;
 /**
  * @author <a href="mailto:tom.fennelly@gmail.com">tom.fennelly@gmail.com</a>
  */
-public class DevOpticsJIRAServlet extends HttpServlet {
+public class DevOpticsJIRAServerPluginServlet extends HttpServlet {
 
+    /* This is basically matching "/plugins/servlet/devoptics", but as long as it isn't followed by slashes, alphanumerics, hyphens or underscores.  It is allowed to be followed by end-of-line though. */
+    private static final String API_REGEX = "/plugins/servlet/devoptics($|[^/0-9a-zA-Z_-])";
+
+    private static final String HTML_TO_SERVE = "/Users/paulwoolley/code/devoptics-jira-plugin/src/main/resources/serve-me.html";
+    private static final String KEY = "com.atlassian.jira.clickjacking.protection.exclude";
     private static final long serialVersionUID = 1L;
 
-    private static final String KEY = "com.atlassian.jira.clickjacking.protection.exclude";
     private static final String VALUE = "/plugins/servlet/devoptics";
-    private static final String HTML_TO_SERVE = "/home/serve-me.html";
 
     static {
+        /* As soon as this controller is loaded, whitelist our API. */
+        configureClickjackingProtectionExcludeProperty();
+    }
 
-        /* TODO: Need a better implementation than this. One that won't wipe out any existing settings or repat-add our entyr.
-         * See https://confluence.atlassian.com/jirakb/security-headers-in-jira-939919914.html for more info
-         */
+    private static void configureClickjackingProtectionExcludeProperty() {
 
-        // As soon as this controller is loaded, whitelist our API.
-        System.setProperty(KEY, VALUE);
+        String value = System.getProperty(KEY);
+
+        if (StringUtils.isBlank(value)) {
+            // The key or the key's values is missing.  Add our API.
+            System.setProperty(KEY, VALUE);
+        } else {
+            // The key's values exists.  Next we need to check if our API is already in there.  Don't re-add ourselves if we are.
+            Pattern pattern = Pattern.compile(API_REGEX, Pattern.UNIX_LINES);
+            Matcher matcher = pattern.matcher(value);
+            if (!matcher.find()) {
+                // No match. Add ourselves
+                value += "," + VALUE;
+                System.setProperty(KEY, value);
+            }
+        }
     }
 
     @Override
